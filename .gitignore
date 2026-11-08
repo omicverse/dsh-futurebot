@@ -1,0 +1,7 @@
+node_modules/
+lib/
+*.tgz
+.DS_Store
+conditions/results/
+# Internal design notes; not part of the public repository.
+DESIGN.md

@@ -1,0 +1,5 @@
+# Activates the futurebot Host plugin when a profile installs this bundle.
+# The row id is stable: patch layers override rows by id.
+- insert:
+    - id: futurebot
+      name: 'dsh-futurebot'
