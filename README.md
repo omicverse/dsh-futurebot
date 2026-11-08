@@ -4,7 +4,7 @@ Bots for [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness).
 
 A bot is a persistent AI individual. It has a name, standing instructions from you, its own workspace, and its own conversation, which continues across days and tasks. It keeps a memory that only it writes, pursues an agenda it can revise, hands work to other bots and picks up their answers, and works in groups toward goals.
 
-This plugin is the reference implementation accompanying the Perspective *The second half of the harness era: from agents to Bots*. The Perspective proposes five conditions for a mature Bot. The first four can be checked operationally, and this repository includes [scripts that test each of them](conditions/README.md) against a live Harness.
+This plugin is a working design prototype of the Bot discussed in the Perspective *The second half of harness design: from agents to Bots*. It is a usable prototype of the design and does not represent the implementation discussed in the paper. The Perspective proposes five conditions for a mature Bot. The first four can be checked operationally, and this repository includes [scripts that test each of them](conditions/README.md) against a live Harness.
 
 | Condition in the Perspective | What the plugin provides | Test |
 | --- | --- | --- |
