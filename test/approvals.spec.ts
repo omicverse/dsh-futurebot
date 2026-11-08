@@ -88,19 +88,19 @@ describe('approval paths', () => {
     expect(await policy.decide({ sessionId: 'g-lin', toolName: 'bash', reason: 'pip install scanpy' }, user)).toBe('rejected')
     expect(asked).toBe(0)
     expect(told).toEqual(['Your bash request was denied by admin (your reviewer): QC first; no network access needed'])
-    expect(recorded).toEqual(['admin 拒绝了 lin 的 bash:QC first; no network access needed'])
+    expect(recorded).toEqual(["admin denied lin's bash request: QC first; no network access needed"])
   })
 
   it('passes an approval to the user unless the user let the admin approve', async () => {
     userAnswers = ['allowed-once']
     expect(await policy.decide({ sessionId: 'g-lin', toolName: 'bash' }, user)).toBe('allowed-once')
     expect(asked).toBe(1)
-    expect(recorded[0]).toContain('转给用户决定')
+    expect(recorded[0]).toContain('passed to the user')
     theGroup = group({ adminMayApprove: true })
     policy = new ApprovalPolicy(ports(), 200)
     expect(await policy.decide({ sessionId: 'g-lin', toolName: 'write' }, user)).toBe('allowed-once')
     expect(asked).toBe(1)
-    expect(recorded.at(-1)).toContain('批准了')
+    expect(recorded.at(-1)).toContain(' approved ')
     // And once allowed, the same kind passes without another review in that conversation.
     expect(await policy.decide({ sessionId: 'g-lin', toolName: 'write' }, user)).toBe('allowed-once')
     expect(reviews).toBe(2)
@@ -136,11 +136,11 @@ describe('the review call', () => {
   })
 
   it('briefs the admin with the group, the requester and the operation', () => {
-    const prompt = reviewPrompt({ admin: bot('总管', { instructions: '谨慎' }), requester: bot('林分析'), group: group({ notice: '只用公开数据' }), recent: [{ id: 'e', group: 'g1', seq: 1, from: 'user', kind: 'message', text: '做 QC', mentions: [], at: stamp }], names: id => (id === 'user' ? '用户' : id), toolName: 'bash', reason: 'pip install' })
+    const prompt = reviewPrompt({ admin: bot('总管', { instructions: '谨慎' }), requester: bot('林分析'), group: group({ notice: '只用公开数据' }), recent: [{ id: 'e', group: 'g1', seq: 1, from: 'user', kind: 'message', text: '做 QC', mentions: [], at: stamp }], names: id => (id === 'user' ? 'User' : id), toolName: 'bash', reason: 'pip install' })
     expect(prompt.system).toContain('You are 总管, the admin of the group "Team"')
     expect(prompt.system).toContain('谨慎')
     expect(prompt.user).toContain('Group notice: 只用公开数据')
-    expect(prompt.user).toContain('[用户] 做 QC')
+    expect(prompt.user).toContain('[User] 做 QC')
     expect(prompt.user).toContain('Operation: bash — pip install')
   })
 })

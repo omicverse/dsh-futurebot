@@ -211,8 +211,8 @@ export class Groups {
   }
 
   name(id: string): string {
-    if (id === 'user') return '用户'
-    if (id === 'system') return '事件'
+    if (id === 'user') return 'User'
+    if (id === 'system') return 'Event'
     return this.bots.get(id)?.name ?? id
   }
 
@@ -236,7 +236,7 @@ export class Groups {
       for (const id of members) group.sessions[id] = await this.ports.createSession(this.bots.get(id)!, `${title} · ${this.name(id)}`)
       await this.groups.put(group.id, group)
       this.onSeats(Object.values(group.sessions))
-      await this.event(group, `建群：${members.map(id => this.name(id)).join('、')}${admin ? `,管理员 ${this.name(admin)}` : ''}`)
+      await this.event(group, `Group created. Members: ${members.map(id => this.name(id)).join(', ')}${admin ? `. Admin: ${this.name(admin)}` : ''}`)
       return this.groups.get(group.id)!
     })
   }
@@ -247,19 +247,19 @@ export class Groups {
       const next: Group = { ...group, sessions: { ...group.sessions }, cursors: { ...group.cursors } }
       const notes: string[] = []
       if (input.title !== undefined) next.title = this.title(input.title, id)
-      if (input.notice !== undefined) { next.notice = this.notice(input.notice); notes.push('改了群公告') }
+      if (input.notice !== undefined) { next.notice = this.notice(input.notice); notes.push('Group notice changed') }
       if (input.members !== undefined) {
         next.members = this.members(input.members)
         for (const added of next.members.filter(m => !group.members.includes(m))) {
           next.sessions[added] ??= await this.ports.createSession(this.bots.get(added)!, `${next.title} · ${this.name(added)}`)
-          notes.push(`${this.name(added)} 进群`)
+          notes.push(`${this.name(added)} joined`)
         }
-        for (const left of group.members.filter(m => !next.members.includes(m))) notes.push(`${this.name(left)} 退群`)
+        for (const left of group.members.filter(m => !next.members.includes(m))) notes.push(`${this.name(left)} left`)
       }
       if (input.admin !== undefined) {
         if (input.admin === null || input.admin === '') delete next.admin
         else next.admin = this.member(input.admin, next.members)
-        notes.push(next.admin ? `管理员改为 ${this.name(next.admin)}` : '不再设管理员')
+        notes.push(next.admin ? `Admin is now ${this.name(next.admin)}` : 'The group no longer has an admin')
       } else if (next.admin !== undefined && !next.members.includes(next.admin)) {
         delete next.admin
       }
@@ -291,7 +291,7 @@ export class Groups {
         const next: Group = { ...group, members: group.members.filter(m => m !== botId), sessions, updatedAt: this.now().toISOString(), rev: group.rev + 1 }
         if (next.admin === botId) delete next.admin
         await this.groups.put(group.id, next)
-        await this.event(next, `${this.name(botId)} 已删除，退群`)
+        await this.event(next, `${this.name(botId)} was deleted and left the group`)
       }
     })
   }
@@ -355,7 +355,7 @@ export class Groups {
         group = await this.save(group, { idleRounds })
         if (idleRounds >= GROUP_LIMITS.idleRounds && !group.paused) {
           group = await this.save(group, { paused: true })
-          await this.event(group, `来回 ${GROUP_LIMITS.idleRounds} 次没有进展，先停下了;用户发言后继续`)
+          await this.event(group, `No progress after ${GROUP_LIMITS.idleRounds} rounds, so the group paused; it continues when the user speaks`)
         }
         group = this.must(group.id)
         const targets = bots.filter(id => id !== bot && group.members.includes(id))
@@ -396,14 +396,14 @@ export class Groups {
       const running = group.goal !== undefined && ['active', 'paused', 'waiting_user'].includes(group.goal.status)
       if (!running) {
         await this.save(group, { goal: { objective, doneWhen, status: 'planning', current: 0, stages, createdAt: stamp, updatedAt: stamp } })
-        await this.event(this.must(group.id), `${this.name(bot.id)} 提了目标计划(${stages.length} 个阶段),等用户确认开始`)
+        await this.event(this.must(group.id), `${this.name(bot.id)} proposed a goal plan with ${stages.length} ${stages.length === 1 ? 'stage' : 'stages'}; waiting for the user to start it`)
         return `Planned ${stages.length} stages. The user starts the goal; until then nothing is handed out.`
       }
       const goal = group.goal!
       const kept = goal.stages.slice(0, goal.current).filter(stage => stage.status === 'passed')
       const next: GroupGoal = { ...goal, objective, doneWhen, status: goal.status === 'waiting_user' ? 'active' : goal.status, current: kept.length, stages: [...kept, ...stages], updatedAt: stamp }
       const saved = await this.save(group, { goal: next })
-      await this.event(saved, `${this.name(bot.id)} 调整了目标计划`)
+      await this.event(saved, `${this.name(bot.id)} revised the goal plan`)
       if (next.status === 'active') await this.startStage(this.must(group.id))
       return `Replanned from stage ${kept.length + 1}.`
     })
@@ -425,9 +425,9 @@ export class Groups {
         current.evidence = input.evidence.trim()
         const last = goal.current + 1 >= stages.length
         await this.save(group, { goal: { ...goal, stages, current: goal.current + 1, status: last ? 'done' : 'active', updatedAt: stamp } })
-        await this.event(this.must(group.id), `阶段 ${goal.current + 1}/${stages.length}「${current.title}」通过:${clip(current.evidence, 200)}`)
+        await this.event(this.must(group.id), `Stage ${goal.current + 1}/${stages.length} "${current.title}" passed: ${clip(current.evidence, 200)}`)
         if (last) {
-          await this.event(this.must(group.id), `目标完成:${goal.objective}`)
+          await this.event(this.must(group.id), `Goal done: ${goal.objective}`)
           return 'Stage passed. That was the last stage: the goal is done. Tell the group and the user.'
         }
         await this.startStage(this.must(group.id))
@@ -440,8 +440,8 @@ export class Groups {
         if (current.attempts >= GROUP_LIMITS.redoLimit) {
           current.status = 'checking'
           await this.save(group, { goal: { ...goal, stages, status: 'waiting_user', updatedAt: stamp } })
-          await this.event(this.must(group.id), `阶段「${current.title}」已退回 ${current.attempts} 次，等用户决定`)
-          return `This stage has been sent back ${current.attempts} times; it now waits for the user. Explain the problem and mention @用户 in your answer.`
+          await this.event(this.must(group.id), `Stage "${current.title}" was sent back ${current.attempts} times; waiting for the user to decide`)
+          return `This stage has been sent back ${current.attempts} times; it now waits for the user. Explain the problem and mention @user in your answer.`
         }
         current.status = 'pending'
         await this.save(group, { goal: { ...goal, stages, updatedAt: stamp } })
@@ -452,8 +452,8 @@ export class Groups {
         if (!input.note?.trim()) throw new GroupError('invalid_group', 'ask_user needs a note with the question')
         current.note = input.note.trim()
         await this.save(group, { goal: { ...goal, stages, status: 'waiting_user', updatedAt: stamp } })
-        await this.event(this.must(group.id), `等用户决定:${clip(current.note, 200)}`)
-        return 'The goal waits for the user. Put the question in your answer and mention @用户.'
+        await this.event(this.must(group.id), `Waiting for the user to decide: ${clip(current.note, 200)}`)
+        return 'The goal waits for the user. Put the question in your answer and mention @user.'
       }
       throw new GroupError('invalid_group', 'verdict must be pass, redo or ask_user')
     })
@@ -469,27 +469,27 @@ export class Groups {
       if (goal === undefined) fail()
       if (action === 'clear') {
         await this.save(group, { goal: undefined })
-        await this.event(this.must(groupId), '用户清除了目标')
+        await this.event(this.must(groupId), 'The user cleared the goal')
       } else if (action === 'start') {
         if (goal!.status !== 'planning') fail()
         await this.save(group, { goal: { ...goal!, status: 'active', updatedAt: stamp }, paused: false, idleRounds: 0 })
-        await this.event(this.must(groupId), '用户开始了目标')
+        await this.event(this.must(groupId), 'The user started the goal')
         await this.startStage(this.must(groupId))
       } else if (action === 'pause') {
         if (goal!.status !== 'active' && goal!.status !== 'waiting_user') fail()
         await this.save(group, { goal: { ...goal!, status: 'paused', updatedAt: stamp } })
-        await this.event(this.must(groupId), '用户暂停了目标')
+        await this.event(this.must(groupId), 'The user paused the goal')
       } else if (action === 'resume') {
         if (goal!.status !== 'paused') fail()
         await this.save(group, { goal: { ...goal!, status: 'active', updatedAt: stamp }, paused: false, idleRounds: 0 })
-        await this.event(this.must(groupId), '用户继续了目标')
+        await this.event(this.must(groupId), 'The user resumed the goal')
         const resumed = this.must(groupId)
         if (this.checking(resumed) && resumed.admin !== undefined) await this.wake(resumed, resumed.admin, 'goal_check')
         else await this.startStage(resumed)
       } else if (action === 'stop') {
         if (goal!.status === 'done' || goal!.status === 'stopped') fail()
         await this.save(group, { goal: { ...goal!, status: 'stopped', updatedAt: stamp } })
-        await this.event(this.must(groupId), '用户停止了目标')
+        await this.event(this.must(groupId), 'The user stopped the goal')
       } else {
         throw new GroupError('invalid_state', 'action must be start, pause, resume, stop or clear')
       }
@@ -550,11 +550,11 @@ export class Groups {
     const goal = group.goal
     if (goal === undefined || !['planning', 'active', 'waiting_user', 'paused'].includes(goal.status)) return undefined
     const stage = goal.stages[goal.current]
-    const parts = [`[群目标] 目标:${goal.objective} · 完成标准:${goal.doneWhen} · 状态:${goal.status}`]
+    const parts = [`[Group goal] Objective: ${goal.objective} · Done when: ${goal.doneWhen} · Status: ${goal.status}`]
     if (stage !== undefined) {
-      parts.push(`当前阶段 ${goal.current + 1}/${goal.stages.length}「${stage.title}」负责人 ${this.name(stage.owner)} · 本阶段完成标准:${stage.doneWhen}${stage.note ? ` · 上次退回原因:${stage.note}` : ''}`)
-      if (goal.status === 'active' && stage.owner === botId && stage.status === 'working') parts.push('这一阶段由你负责：做完在回答里给出证据。')
-      if (goal.status === 'active' && botId === group.admin && stage.status === 'checking') parts.push(`${this.name(stage.owner)} 已回复：对照完成标准核对证据，然后调用 goal_check。`)
+      parts.push(`Current stage ${goal.current + 1}/${goal.stages.length} "${stage.title}", owner ${this.name(stage.owner)} · Stage done when: ${stage.doneWhen}${stage.note ? ` · Sent back last time because: ${stage.note}` : ''}`)
+      if (goal.status === 'active' && stage.owner === botId && stage.status === 'working') parts.push('This stage is yours: when it is done, give the evidence in your answer.')
+      if (goal.status === 'active' && botId === group.admin && stage.status === 'checking') parts.push(`${this.name(stage.owner)} has answered: check the evidence against the stage's done-when, then call goal_check.`)
     }
     return parts.join(' · ')
   }
@@ -571,10 +571,10 @@ export class Groups {
     if (stage === undefined) return
     if (!group.members.includes(stage.owner)) {
       await this.save(group, { goal: { ...goal, status: 'waiting_user', updatedAt: this.now().toISOString() } })
-      await this.event(this.must(group.id), `负责人 ${this.name(stage.owner)} 已不在群里，等用户决定`)
+      await this.event(this.must(group.id), `Owner ${this.name(stage.owner)} is no longer in the group; waiting for the user to decide`)
       return
     }
-    const started = await this.event(group, `目标阶段 ${goal.current + 1}/${goal.stages.length} 开始:「${stage.title}」· 负责人 ${this.name(stage.owner)} · 完成标准:${stage.doneWhen}${stage.note ? ` · 退回原因:${stage.note}` : ''}`)
+    const started = await this.event(group, `Stage ${goal.current + 1}/${goal.stages.length} started: "${stage.title}" · owner ${this.name(stage.owner)} · done when: ${stage.doneWhen}${stage.note ? ` · sent back because: ${stage.note}` : ''}`)
     const latest = this.must(group.id)
     const stages = latest.goal!.stages.map((s, i) => (i === goal.current ? { ...s, status: 'working' as const, startSeq: started.seq } : s))
     await this.save(latest, { goal: { ...latest.goal!, stages, updatedAt: this.now().toISOString() }, ...(stage.owner === latest.admin ? {} : { batch: [stage.owner] }) })

@@ -124,6 +124,7 @@ const en = {
   deleteGroupConfirm: 'Delete {title}? The members keep their conversations.',
   you: 'You',
   event: 'Event',
+  listSeparator: ', ',
 }
 
 export type MessageKey = keyof typeof en
@@ -251,6 +252,7 @@ const zh: Record<MessageKey, string> = {
   deleteGroupConfirm: '解散 {title}?成员的对话都会保留。',
   you: '我',
   event: '事件',
+  listSeparator: '、',
 }
 
 export const dictionaries = { en, zh }
