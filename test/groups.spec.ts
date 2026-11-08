@@ -67,7 +67,7 @@ describe('managing groups', () => {
     expect(group).toMatchObject({ title: '单细胞小组', members: ['main', 'lin', 'zhao'], admin: 'main', approvals: 'admin', adminMayApprove: false, userIn: true })
     expect(Object.keys(group.sessions)).toEqual(['main', 'lin', 'zhao'])
     expect(groups.forSession(seat(group, 'lin'))!.bot.id).toBe('lin')
-    expect(groups.entries(group.id).map(e => e.text)).toEqual(['建群：总管、林分析、Zhao,管理员 总管'])
+    expect(groups.entries(group.id).map(e => e.text)).toEqual(['Group created. Members: 总管, 林分析, Zhao. Admin: 总管'])
   })
 
   it('refuses bad groups', async () => {
@@ -86,7 +86,7 @@ describe('managing groups', () => {
     const updated = await groups.update(group.id, { members: ['main', 'lin', 'zhao', 'Wu'], notice: '新公告' })
     expect(updated.sessions.wu).toBeDefined()
     expect(seated.at(-1)).toEqual([updated.sessions.wu])
-    expect(groups.entries(group.id).map(e => e.text)).toContain('Wu 进群')
+    expect(groups.entries(group.id).map(e => e.text)).toContain('Wu joined')
     await groups.removeBot('main')
     expect(groups.get(group.id)).toMatchObject({ members: ['lin', 'zhao', 'wu'] })
     expect(groups.get(group.id)!.admin).toBeUndefined()
@@ -99,8 +99,8 @@ describe('who answers', () => {
     await groups.post(group.id, '把 pbmc 先做 QC')
     const [first] = to(group, 'main')
     expect(first!.source).toMatchObject({ type: 'group', job: group.id, reason: 'admin_routed' })
-    expect(first!.text).toContain('[用户] 把 pbmc 先做 QC')
-    expect(first!.text).toContain('建群')
+    expect(first!.text).toContain('[User] 把 pbmc 先做 QC')
+    expect(first!.text).toContain('Group created')
     expect(to(group, 'lin')).toHaveLength(0)
   })
 
@@ -146,7 +146,7 @@ describe('who answers', () => {
     }
     const paused = groups.get(group.id)!
     expect(paused.paused).toBe(true)
-    expect(groups.entries(group.id).at(-1)!.text).toContain('先停下了')
+    expect(groups.entries(group.id).at(-1)!.text).toContain('so the group paused')
     const before = delivered.length
     await speak(group, 'main', '@林分析 再想想', { tools: false })
     expect(delivered.length).toBe(before)
@@ -181,22 +181,22 @@ describe('group goals', () => {
     await groups.goalAction(group.id, 'start')
     const handed = to(group, 'lin').at(-1)!
     expect(handed.source.reason).toBe('goal_stage')
-    expect(handed.text).toContain('[群目标]')
-    expect(handed.text).toContain('这一阶段由你负责')
+    expect(handed.text).toContain('[Group goal]')
+    expect(handed.text).toContain('This stage is yours')
     await speak(group, 'lin', 'QC 完成，qc.h5ad 已写出。')
     expect(groups.get(group.id)!.goal!.stages[0]!.status).toBe('checking')
     const toCheck = to(group, 'main').at(-1)!
     expect(toCheck.source.reason).toBe('goal_check')
-    expect(toCheck.text).toContain('林分析 已回复：对照完成标准核对证据')
+    expect(toCheck.text).toContain('林分析 has answered: check the evidence against')
     expect(await groups.check(seat(group, 'main'), { verdict: 'redo', note: '缺线粒体比例图' })).toContain('Sent back')
-    expect(to(group, 'lin').at(-1)!.text).toContain('退回原因:缺线粒体比例图')
+    expect(to(group, 'lin').at(-1)!.text).toContain('sent back because: 缺线粒体比例图')
     await speak(group, 'lin', '补了线粒体比例图。')
     expect(await groups.check(seat(group, 'main'), { verdict: 'pass', evidence: 'qc.h5ad 和图都在' })).toContain('handed to Zhao')
     expect(to(group, 'zhao').at(-1)!.source.reason).toBe('goal_stage')
     await speak(group, 'zhao', 'summary.md 写好了。')
     expect(await groups.check(seat(group, 'main'), { verdict: 'pass', evidence: 'summary.md 在' })).toContain('goal is done')
     expect(groups.get(group.id)!.goal).toMatchObject({ status: 'done', current: 2 })
-    expect(groups.entries(group.id).at(-1)!.text).toBe('目标完成:完成 pbmc 的预处理和注释')
+    expect(groups.entries(group.id).at(-1)!.text).toBe('Goal done: 完成 pbmc 的预处理和注释')
   })
 
   it('waits for the user after three send-backs, and the user speaking resumes it', async () => {

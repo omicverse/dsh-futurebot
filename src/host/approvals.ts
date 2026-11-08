@@ -113,8 +113,8 @@ export class ApprovalPolicy {
           ...(route === undefined ? {} : { route }),
           admin, requester: bot, group, recent: this.ports.recent(group.id), names: id => this.ports.names(id), toolName: ask.toolName, ...(ask.reason ? { reason: ask.reason } : {}),
         })
-        const verb = adminView.decision === 'deny' ? '拒绝了' : adminView.decision === 'approve' && group.adminMayApprove ? '批准了' : '转给用户决定'
-        await this.ports.record(group.id, admin.id, `${admin.name} ${verb} ${bot.name} 的 ${ask.toolName}:${adminView.reason}`).catch(() => undefined)
+        const verb = adminView.decision === 'deny' ? 'denied' : adminView.decision === 'approve' && group.adminMayApprove ? 'approved' : 'passed to the user'
+        await this.ports.record(group.id, admin.id, `${admin.name} ${verb} ${bot.name}'s ${ask.toolName} request: ${adminView.reason}`).catch(() => undefined)
         if (adminView.decision === 'deny') {
           this.ports.tell(ask.sessionId, `Your ${ask.toolName} request was denied by ${admin.name} (your reviewer): ${adminView.reason}`)
           return 'rejected'

@@ -16,8 +16,8 @@ describe('reading bot messages back', () => {
   })
 
   it('reads group updates, evidence and notices', () => {
-    const group = '<group_update group="g1" title="单细胞小组" reason="goal_stage">\n[群目标] 目标:…\n[用户] 开始\n</group_update>'
-    expect(parseRelay(group, { type: 'group' })).toEqual({ kind: 'group', title: '单细胞小组', reason: 'goal_stage', body: '[群目标] 目标:…\n[用户] 开始' })
+    const group = '<group_update group="g1" title="单细胞小组" reason="goal_stage">\n[Group goal] Objective: …\n[User] start\n</group_update>'
+    expect(parseRelay(group, { type: 'group' })).toEqual({ kind: 'group', title: '单细胞小组', reason: 'goal_stage', body: '[Group goal] Objective: …\n[User] start' })
     const evidence = '<evidence watch="w1" folder="/w/in">\nFiles changed while you were idle:\n- added: day7.csv\n</evidence>\n(Nobody asked you anything.)'
     expect(parseRelay(evidence, { type: 'evidence' })).toMatchObject({ kind: 'evidence', folder: '/w/in', body: 'Files changed while you were idle:\n- added: day7.csv' })
     expect(parseRelay('Your bash request was denied.', { type: 'notice' })).toEqual({ kind: 'notice', body: 'Your bash request was denied.' })

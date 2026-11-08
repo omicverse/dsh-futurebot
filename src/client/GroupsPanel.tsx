@@ -50,7 +50,7 @@ export function GroupsPanel({ api, bots, t }: Props) {
                   <span className="ob-name">{group.title}</span>
                   {group.goal !== undefined && <span className="ob-chip">{t(`goalStatus_${group.goal.status}` as MessageKey)}</span>}
                 </div>
-                <p className="ob-item-caption">{group.members.map(id => bots.find(b => b.id === id)?.name ?? id).join('、')}</p>
+                <p className="ob-item-caption">{group.members.map(id => bots.find(b => b.id === id)?.name ?? id).join(t('listSeparator'))}</p>
               </div>
             </li>
           ))}
@@ -210,7 +210,7 @@ function GroupView({ id, api, bots, t, onBack }: Omit<Props, 'bots'> & { id: str
       <div className="ob-group-head">
         <button type="button" className="ob-link" onClick={onBack}>← {t('back')}</button>
         <h2 className="ob-h2">{group.title}</h2>
-        <span className="ob-item-caption">{group.members.map(m => `${name(m)}${m === group.admin ? '★' : ''}`).join('、')}</span>
+        <span className="ob-item-caption">{group.members.map(m => `${name(m)}${m === group.admin ? '★' : ''}`).join(t('listSeparator'))}</span>
       </div>
 
       {goal !== undefined && (
